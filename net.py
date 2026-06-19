@@ -1,6 +1,7 @@
 import socket
 from config import FileConfig
 from ring import Ring
+from packet import is_token, build_token
 from packet import (
     DISCOVER,
     HELLO,
@@ -25,6 +26,41 @@ def send_broadcast(message: str):
     sock.close()
 
 
+# Envia em unicast
+def send_unicast(message: str, ip: str, port: int):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sock.sendto(
+        message.encode(), (ip, port))
+
+    sock.close()
+
+
+# Escuta em unicast
+def listen_unicast(cfg: FileConfig, ring: Ring):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sock.bind(("", cfg.port))
+
+    #DEBUG
+    print(f"Escutando unicast na porta {cfg.port}")
+
+    while True:
+        data, addr = sock.recvfrom(1024)
+        message = data.decode()
+
+        if is_token(message):
+            #DEBUG
+            print(f"\n[{cfg.letter}] Recebi TOKEN")
+
+            successor = ring.get_next(cfg.letter)
+
+            if successor is not None:
+                #DEBUG
+                print(f"[{cfg.letter}] Enviando TOKEN para {successor.letter}")
+                send_unicast(build_token(), successor.ip, successor.port)
+
+
 # Cria um socket: sock = socket(AF_INET, socket.SOCK_DGRAM)
 # Configura setsockopt para habilitar BROADCAST
 # Escuta: bind(("", 6000))
@@ -43,7 +79,7 @@ def listen_broadcast(cfg: FileConfig, ring: Ring, my_ip: str):
     sock.bind(("", BROADCAST_PORT))
 
     #DEBUG
-    print(f"Escutando broadcast na porta {BROADCAST_PORT}")
+    #print(f"Escutando broadcast na porta {BROADCAST_PORT}")
 
     while True:
         data, addr = sock.recvfrom(1024)
@@ -61,13 +97,14 @@ def listen_broadcast(cfg: FileConfig, ring: Ring, my_ip: str):
 
         if packet.type == DISCOVER:
             #DEBUG
-            print(f"\nRecebi DISCOVER de {packet.letter}")
+            #print(f"\nRecebi DISCOVER de {packet.letter}")
 
             hello = build_hello(cfg, my_ip)
+            print(f"HELLO: {hello}")
             send_broadcast(hello)
 
-        elif packet.type == HELLO:
+        #elif packet.type == HELLO:
             #DEBUG
-            print(f"\nRecebi HELLO de {packet.letter}")
+            #print(f"\nRecebi HELLO de {packet.letter}")
 
         ring.print_ring(cfg.letter)

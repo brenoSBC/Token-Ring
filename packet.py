@@ -4,7 +4,7 @@ from config import FileConfig
 
 DISCOVER = 10
 HELLO = 20
-
+TOKEN = 1000
 
 @dataclass
 class DiscoveryPacket:
@@ -37,3 +37,12 @@ def parse_discovery_packet(buffer: str) -> DiscoveryPacket | None:
         )
     except ValueError:
         return None
+    
+# Transforma o Token valor 1000 em string
+def build_token() -> str:
+    return str(TOKEN)
+
+
+# Valida se message é o Token
+def is_token(message: str) -> bool:
+    return message.strip() == str(TOKEN)

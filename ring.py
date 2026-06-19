@@ -38,8 +38,8 @@ class Ring:
 
     def print_ring(self, my_letter: str):
         with self.lock:
-            text = " -> ".join(node.letter for node in self.nodes)
-            print(f"\nAnel atual: {text}")
+            #text = " -> ".join(node.letter for node in self.nodes)
+            #print(f"\nAnel atual: {text}")
 
             successor = None
 
@@ -48,5 +48,5 @@ class Ring:
                     successor = self.nodes[(i + 1) % len(self.nodes)]
                     break
 
-            if successor:
-                print(f"Meu sucessor: {successor.letter} {successor.ip}:{successor.port}")
+            #if successor:
+                #print(f"Meu sucessor: {successor.letter} {successor.ip}:{successor.port}")
