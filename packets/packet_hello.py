@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from config import FileConfig
 
 HELLO = 20
 
@@ -10,8 +11,8 @@ class HelloPacket:
     port: int
 
 
-def build_hello(letter: str, ip: str, port: int) -> str:
-    return f"{HELLO}:{letter}:{ip}:{port}"
+def build_hello(cfg: FileConfig, ip: str) -> str:
+    return f"{HELLO}:{cfg.letter}:{ip}:{cfg.port}"
 
 def is_hello(message: str) -> bool:
     return message.startswith(f"{HELLO}:")
