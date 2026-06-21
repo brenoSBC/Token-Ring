@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 DATA = 2000
-
+MACHINE_NOT_FOUND = "maquinainexistente"
 
 @dataclass
 class DataPacket:

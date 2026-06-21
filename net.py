@@ -2,8 +2,9 @@ import socket
 from config import FileConfig
 from ring import Ring
 from message_queue import MessageQueue
-from packets.packet_data import build_data_packet, is_data_packet, parse_data_packet
-from packets.packet_discovery import parse_discovery_packet
+from packets.packet_data import DataPacket, build_data_packet, is_data_packet, parse_data_packet, MACHINE_NOT_FOUND
+from packets.packet_hello import build_hello
+from packets.packet_discovery import parse_discovery_packet, is_discovery_packet
 from packets.packet_token import is_token, build_token
 
 
@@ -157,7 +158,7 @@ def listen_broadcast(cfg: FileConfig, ring: Ring, my_ip: str):
 
         ring.add_node(packet.letter, packet.ip, packet.port)
 
-        if packet.type == DISCOVER:
+        if is_discovery_packet(message):
             #DEBUG
             #print(f"\nRecebi DISCOVER de {packet.letter}")
 
