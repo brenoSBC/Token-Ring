@@ -5,6 +5,10 @@ from config import FileConfig
 DISCOVER = 10
 HELLO = 20
 TOKEN = 1000
+DATA = 2000
+ACK = "ACK"
+NAK = "NAK"
+MACHINE_NOT_FOUND = "maquinainexistente"
 
 @dataclass
 class DiscoveryPacket:
@@ -12,6 +16,15 @@ class DiscoveryPacket:
     letter: str
     ip: str
     port: int
+
+@dataclass
+class DataPacket:
+    type: int
+    origin: str
+    destination: str
+    error_control: str
+    crc: int
+    message: str
 
 
 def build_discover(cfg: FileConfig, ip: str) -> str:
@@ -21,7 +34,10 @@ def build_discover(cfg: FileConfig, ip: str) -> str:
 def build_hello(cfg: FileConfig, ip: str) -> str:
     return f"{HELLO}:{cfg.letter}:{ip}:{cfg.port}"
 
+def build_data_packet(origin: str, destination: str, error_control: str, crc: int, message: str) -> str:
+    return f"{DATA}:{origin}:{destination}:{error_control}:{crc}:{message}"
 
+# Parser do pacote DISCOVERY (DiscoveryPacket)
 def parse_discovery_packet(buffer: str) -> DiscoveryPacket | None:
     parts = buffer.strip().split(":")
 
@@ -37,7 +53,30 @@ def parse_discovery_packet(buffer: str) -> DiscoveryPacket | None:
         )
     except ValueError:
         return None
-    
+
+# Parser da mensagem (DataPacket)
+def parse_data_packet(buffer: str) -> DataPacket | None:
+    parts = buffer.strip().split(":", maxsplit=5)
+
+    if len(parts) != 6:
+        return None
+
+    try:
+        return DataPacket(
+            type=int(parts[0]),
+            origin=parts[1],
+            destination=parts[2],
+            error_control=parts[3],
+            crc=int(parts[4]),
+            message=parts[5],
+        )
+    except ValueError:
+        return None
+
+# Verificar se o pacote é do type 2000 (mensagem, DataPacket)
+def is_data_packet(message: str) -> bool:
+    return message.strip().startswith(f"{DATA}:")
+
 # Transforma o Token valor 1000 em string
 def build_token() -> str:
     return str(TOKEN)
@@ -46,3 +85,4 @@ def build_token() -> str:
 # Valida se message é o Token
 def is_token(message: str) -> bool:
     return message.strip() == str(TOKEN)
+
