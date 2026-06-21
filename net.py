@@ -2,19 +2,9 @@ import socket
 from config import FileConfig
 from ring import Ring
 from message_queue import MessageQueue
-
-from packet import (
-    DISCOVER,
-    HELLO,
-    MACHINE_NOT_FOUND,
-    build_data_packet,
-    build_hello,
-    build_token,
-    is_data_packet,
-    is_token,
-    parse_data_packet,
-    parse_discovery_packet,
-)
+from packets.packet_data import build_data_packet, is_data_packet, parse_data_packet
+from packets.packet_discovery import parse_discovery_packet
+from packets.packet_token import is_token, build_token
 
 
 BROADCAST_PORT = 6000
