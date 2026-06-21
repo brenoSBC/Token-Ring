@@ -138,6 +138,7 @@ def listen_broadcast(cfg: FileConfig, ring: Ring, my_ip: str):
 
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1) 
 
     sock.bind(("", BROADCAST_PORT))
 
