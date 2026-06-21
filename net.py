@@ -57,61 +57,69 @@ def listen_unicast(cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
     while True:
         raw_data, addr = sock.recvfrom(1024)
         message = raw_data.decode()
+        handle_message(message, cfg, ring, message_queue) 
+        
+def handle_message(message: str, cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
+    if is_token(message):
+        handle_token(cfg, ring, message_queue)
+    elif is_data_packet(message):
+        packet = parse_data_packet(message)
+        if packet is None:
+            print(f"[{cfg.letter}] Pacote DATA inválido: {message}")
+            return
+        handle_data_packet(message, packet, cfg, ring, message_queue)
+    else:
+        print(f"[{cfg.letter}] Mensagem desconhecida: {message}")
 
-        if is_token(message):
-            print(f"\n[{cfg.letter}] Recebi TOKEN")
 
-            successor = ring.get_next(cfg.letter)
+def handle_token(cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
+    print(f"\n[{cfg.letter}] Recebi TOKEN")
+    successor = ring.get_next(cfg.letter)
+    if successor is None:
+        return
 
-            if successor is None:
-                continue
+    if message_queue.has_message():
+        queued = message_queue.peek()
+        packet_str = build_data_packet(
+            origin=cfg.letter,
+            destination=queued.destination,
+            error_control=MACHINE_NOT_FOUND,
+            crc=0,
+            message=queued.message,
+        )
+        print(f"[{cfg.letter}] Enviando DATA para {successor.letter}")
+        send_unicast(packet_str, successor.ip, successor.port)
+    else:
+        print(f"[{cfg.letter}] Fila vazia. Enviando TOKEN para {successor.letter}")
+        send_unicast(build_token(), successor.ip, successor.port)
 
-            if message_queue.has_message():
-                queued = message_queue.peek()
 
-                packet_str = build_data_packet(origin=cfg.letter, destination=queued.destination, error_control=MACHINE_NOT_FOUND, crc=0, message=queued.message)
+def handle_data_packet(raw: str, packet: DataPacket, cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
+    # Pacote completou a volta
+    if packet.origin == cfg.letter:
+        print(f"[{cfg.letter}] Meu pacote voltou. Resultado: {packet.error_control}")
+        message_queue.pop()
+        _release_token(cfg, ring)
+        return
 
-                print(f"[{cfg.letter}] Enviando DATA para {successor.letter}")
+    # Sou o destino
+    if packet.destination == cfg.letter:
+        print(f"[{cfg.letter}] Mensagem recebida de {packet.origin}: {packet.message}")
+        # Aqui você ainda precisa repassar — o ACK deveria alterar o error_control
+        # antes de encaminhar de volta ao anel. Deixo como ponto de atenção.
 
-                send_unicast(packet_str, successor.ip, successor.port)
+    # Repassa para o próximo (destino ou não)
+    successor = ring.get_next(cfg.letter)
+    if successor is not None:
+        print(f"[{cfg.letter}] Repassando DATA para {successor.letter}")
+        send_unicast(raw, successor.ip, successor.port)
 
-            else:
-                print(f"[{cfg.letter}] Fila vazia. " f"Enviando TOKEN para {successor.letter}")
-                send_unicast(build_token(), successor.ip, successor.port)
 
-        # PACOTE DE DADOS
-        elif is_data_packet(message):
-            packet = parse_data_packet(message)
-
-            if packet is None:
-                print(f"[{cfg.letter}] Pacote DATA inválido: {message}")
-                continue
-
-            # O pacote completou uma volta no anel
-            if packet.origin == cfg.letter:
-                print(f"[{cfg.letter}] Meu pacote voltou. "f"Resultado: {packet.error_control}")
-
-                message_queue.pop()
-
-                successor = ring.get_next(cfg.letter)
-
-                if successor is not None:
-                    print(f"[{cfg.letter}] Liberando TOKEN "f"para {successor.letter}")
-                    send_unicast(build_token(), successor.ip, successor.port)
-                
-                continue
-
-            # Sou o destino da mensagem
-            if packet.destination == cfg.letter:
-                print(f"[{cfg.letter}] Mensagem recebida "f"de {packet.origin}: {packet.message}")
-
-            # Repassa para o proximo do anel
-            successor = ring.get_next(cfg.letter)
-
-            if successor is not None:
-                print(f"[{cfg.letter}] Repassando DATA "f"para {successor.letter}")
-
-                send_unicast(message, successor.ip, successor.port)
+def _release_token(cfg: FileConfig, ring: Ring):
+    successor = ring.get_next(cfg.letter)
+    if successor is not None:
+        print(f"[{cfg.letter}] Liberando TOKEN para {successor.letter}")
+        send_unicast(build_token(), successor.ip, successor.port)
 
 
 
