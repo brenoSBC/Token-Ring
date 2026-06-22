@@ -51,7 +51,6 @@ class TokenController:
         
         now = time.time()
         elapsed = now - self.last_token_time
-        print(f"[{threading.current_thread().name}] Verificando timeout do token: {elapsed:.2f}s elapsed")
 
         return elapsed > self.timeout
 
@@ -73,6 +72,8 @@ class TokenController:
             successor.ip,
             successor.port
         )
+
+        self.last_token_time = time.time()  # Reinicia o timer após inserir token
 
     def remove_token(self):
         self.remove_next_token = True

@@ -80,7 +80,7 @@ def handle_token(cfg: FileConfig, ring: Ring, message_queue: MessageQueue, token
     if not token_controller.on_token_received(cfg):
         return
 
-    #token_controller.last_token_time = time.time()
+    token_controller.last_token_time = time.time()
     
     successor = ring.get_next(cfg.letter)
     if successor is None:
