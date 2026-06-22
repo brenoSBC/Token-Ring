@@ -1,4 +1,5 @@
 import socket
+import time
 from config import FileConfig
 from ring import Ring
 from message_queue import MessageQueue
@@ -6,6 +7,7 @@ from packets.packet_data import DataPacket, build_data_packet, is_data_packet, p
 from packets.packet_hello import build_hello
 from packets.packet_discovery import parse_discovery_packet, is_discovery_packet
 from packets.packet_token import is_token, build_token
+from token_controller import TokenController
 
 
 BROADCAST_PORT = 6000
@@ -48,7 +50,7 @@ def send_unicast(message: str, ip: str, port: int):
     # sou o destino?
         # sim -> mostro a mensagem
     # repasso DATA para o sucessor
-def listen_unicast(cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
+def listen_unicast(cfg: FileConfig, ring: Ring, message_queue: MessageQueue, token_controller: TokenController):
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("", cfg.port))
@@ -58,11 +60,11 @@ def listen_unicast(cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
     while True:
         raw_data, addr = sock.recvfrom(1024)
         message = raw_data.decode()
-        handle_message(message, cfg, ring, message_queue) 
+        handle_message(message, cfg, ring, message_queue, token_controller) 
         
-def handle_message(message: str, cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
+def handle_message(message: str, cfg: FileConfig, ring: Ring, message_queue: MessageQueue, token_controller: TokenController):
     if is_token(message):
-        handle_token(cfg, ring, message_queue)
+        handle_token(cfg, ring, message_queue, token_controller)
     elif is_data_packet(message):
         packet = parse_data_packet(message)
         if packet is None:
@@ -73,8 +75,13 @@ def handle_message(message: str, cfg: FileConfig, ring: Ring, message_queue: Mes
         print(f"[{cfg.letter}] Mensagem desconhecida: {message}")
 
 
-def handle_token(cfg: FileConfig, ring: Ring, message_queue: MessageQueue):
-    print(f"\n[{cfg.letter}] Recebi TOKEN")
+def handle_token(cfg: FileConfig, ring: Ring, message_queue: MessageQueue, token_controller: TokenController):
+    #print(f"\n[{cfg.letter}] Recebi TOKEN")
+    if not token_controller.on_token_received(cfg):
+        return
+    
+    time.sleep(cfg.token_time)
+    
     successor = ring.get_next(cfg.letter)
     if successor is None:
         return

@@ -8,6 +8,7 @@ from packets.packet_discovery import build_discover
 from packets.packet_token import build_token
 from net import send_broadcast, listen_broadcast, listen_unicast, send_unicast
 from message_queue import MessageQueue
+from token_controller import TokenController
 
 
 MY_IP = "127.0.0.1"
@@ -30,6 +31,13 @@ def main():
 
     message_queue = MessageQueue() # Cria uma fila de mensagens
 
+    token_controller = TokenController(
+        is_manager=(cfg.letter == "A"),
+        timeout=cfg.timeout_token,
+        min_interval=cfg.min_time_token,
+        send_unicast=send_unicast
+    )
+
     # Cria uma nova Thread, quando ela começar, executa: listen_broadcast(cfg, ring, MY_IP)
     broadcast_thread = threading.Thread(
         target=listen_broadcast,
@@ -40,7 +48,7 @@ def main():
     # Cria uma nova Thread, quando ela começar, executa: listen_unicast(cfg, ring)
     unicast_thread = threading.Thread(
         target=listen_unicast,
-        args=(cfg, ring, message_queue),
+        args=(cfg, ring, message_queue, token_controller),
         daemon=True
     )
 
@@ -62,14 +70,17 @@ def main():
     # Sleep para garantir que todos os DISCOVER e HELLO aconteceram (seria melhor usar um contador, mas enfim...tanto faz)
     time.sleep(3)
 
-    if cfg.letter == "A":
-        successor = ring.get_next(cfg.letter)
+    if token_controller.is_manager:
+        token_controller.insert_token(ring, cfg)
+        
+        monitor_thread = threading.Thread(
+            target=token_controller.monitor_token,
+            args=(ring, cfg),
+            daemon=True
+        )
 
-        if successor is not None:
-            print(f"[A] Gerando TOKEN inicial para {successor.letter}")
-            send_unicast(build_token(), successor.ip, successor.port)
-
-
+        monitor_thread.start()
+        
 
     while True:
         time.sleep(5)
