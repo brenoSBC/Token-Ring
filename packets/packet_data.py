@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 DATA = 2000
 MACHINE_NOT_FOUND = "maquinainexistente"
+ACK = "ACK"
+NACK = "NACK"
 
 @dataclass
 class DataPacket:
