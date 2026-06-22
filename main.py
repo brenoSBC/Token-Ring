@@ -13,6 +13,14 @@ from token_controller import TokenController
 
 MY_IP = "127.0.0.1"
 
+def print_menu():
+    print("\n" + "="*35)
+    print("  [r] Retirar token da rede")
+    print("  [i] Inserir token na rede")
+    print("  [s] Status do anel")
+    print("  [q] Sair")
+    print("="*35)
+    print("> ", end="", flush=True)
 
 def main():
     if len(sys.argv) < 2:
@@ -42,14 +50,16 @@ def main():
     broadcast_thread = threading.Thread(
         target=listen_broadcast,
         args=(cfg, ring, MY_IP),
-        daemon=True
+        daemon=True,
+        name="BroadcastThread"
     )
 
     # Cria uma nova Thread, quando ela começar, executa: listen_unicast(cfg, ring)
     unicast_thread = threading.Thread(
         target=listen_unicast,
         args=(cfg, ring, message_queue, token_controller),
-        daemon=True
+        daemon=True,
+        name="UnicastThread"
     )
 
     broadcast_thread.start() # Inicia a Thread de broadcast
@@ -76,15 +86,35 @@ def main():
         monitor_thread = threading.Thread(
             target=token_controller.monitor_token,
             args=(ring, cfg),
-            daemon=True
+            daemon=True,
+            name="MonitorThread"
         )
 
         monitor_thread.start()
         
 
     while True:
-        time.sleep(5)
-        ring.print_ring(cfg.letter)
+        print_menu()
+        try:
+            cmd = input().strip().lower()
+        except EOFError:
+            break
+
+        if cmd == 'r':
+            token_controller.remove_token()
+
+        elif cmd == 'i':
+            if token_controller.is_manager:
+                token_controller.insert_token(ring, cfg)
+            else:
+                print(f"[{cfg.letter}] Apenas o gerenciador do token pode inserir.")
+
+        elif cmd == 's':
+            ring.print_ring(cfg.letter)
+
+        elif cmd == 'q':
+            print("Encerrando...")
+            break
 
 
 if __name__ == "__main__":

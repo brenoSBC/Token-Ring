@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import threading
 from config import FileConfig
 from packets.packet_token import build_token
 from ring import Ring
@@ -20,14 +21,18 @@ class TokenController:
         now = time.time()
         elapsed = now - self.last_token_time
 
+        if self.remove_next_token:
+            print(f"[{cfg.letter}] Token removido manualmente da rede.")
+            self.remove_next_token = False
+            self.last_token_time = now  # evita monitor reinserir imediatamente
+            return False
+
         if self.is_manager and self.last_token_time > 0:
             if elapsed < self.min_interval:
                 print(f"[{cfg.letter}] Token duplicado detectado "
                 f"(chegou em {elapsed:.2f}s, mínimo é {self.min_interval}s). Descartando.")
                 self.last_token_time = now
                 return False
-
-        self.last_token_time = now
 
         return True
     
@@ -36,7 +41,7 @@ class TokenController:
             time.sleep(1)
 
             if self.check_token_timeout():
-                print(f"[{cfg.letter}] TOKEN PERDIDO!")
+                print(f"[{cfg.letter}] TOKEN PERDIDO! thread {threading.current_thread().name}")
                 self.insert_token(ring, cfg)
 
     def check_token_timeout(self) -> bool:
@@ -46,7 +51,8 @@ class TokenController:
         
         now = time.time()
         elapsed = now - self.last_token_time
-        
+        print(f"[{threading.current_thread().name}] Verificando timeout do token: {elapsed:.2f}s elapsed")
+
         return elapsed > self.timeout
 
     def insert_token(self, ring: Ring, cfg: FileConfig):
@@ -60,7 +66,7 @@ class TokenController:
             print(f"[{cfg.letter}] Não há sucessor para enviar token.")
             return
 
-        print(f"[{cfg.letter}] Inserindo TOKEN na rede -> {successor.letter}")
+        print(f"[{cfg.letter}] Inserindo TOKEN na rede -> {successor.letter}") 
 
         self.send_unicast(
             build_token(),

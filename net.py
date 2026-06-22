@@ -79,8 +79,8 @@ def handle_token(cfg: FileConfig, ring: Ring, message_queue: MessageQueue, token
     #print(f"\n[{cfg.letter}] Recebi TOKEN")
     if not token_controller.on_token_received(cfg):
         return
-    
-    time.sleep(cfg.token_time)
+
+    #token_controller.last_token_time = time.time()
     
     successor = ring.get_next(cfg.letter)
     if successor is None:
